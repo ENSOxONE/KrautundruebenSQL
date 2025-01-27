@@ -1,11 +1,4 @@
--- phpMyAdmin SQL Dump
--- version 5.0.3
--- https://www.phpmyadmin.net/
---
--- Host: localhost
--- Erstellungszeit: 21. Okt 2020 um 08:10
--- Server-Version: 10.4.14-MariaDB
--- PHP-Version: 7.4.11
+
 
 CREATE DATABASE krautundrueben;
 USE krautundrueben;

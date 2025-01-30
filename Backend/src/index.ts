@@ -36,31 +36,75 @@ app.post("/login", upload.none(), async(request: Request, response: Response) =>
             errors: [
                 "User not found."
             ]
-        })
+        });
+        return;
     }
     if (user.PASSWORDHASH == sha512(request.body.password)) {
         const sessionToken = generateRandomHex();
-        query(`update KUNDE set SESSIONTOKEN = ? where KUNDENNR = ?`, [sessionToken, user.KUNDENNR])
+        query(`update KUNDE set SESSIONTOKEN = ? where KUNDENNR = ?`, [sessionToken, user.KUNDENNR]);
         response.cookie("auth", sessionToken).status(200).json({
-            "success": true
-        })
+            success: true
+        });
+        return;
     } else {
         response.status(403).json({
             success: false,
             errors: [
                 "Invalid password."
             ]
-        })
+        });
+        return;
     }
-    response.status(500).json({
-        success: false,
-        errors: [
-            "Idk wtf u did but u broke it"
-        ]
-    });
 })
 
-app.get("/", async(request: Request, response: Response) => {
+app.get("/recepies", async(_: Request, response: Response) => {
+    response.json(await query("select * from REZEPTE"));
+})
+
+app.get("/ingredients", async(_: Request, response: Response) => {
+    response.json(await query("select * from ZUTAT"));
+})
+
+type Recepie = {
+    REZEPTNR: number,
+    REZEPT: string,
+    ZUBEREITUNG: string,
+    PORTIONEN: string
+}
+
+type Ingredient = {
+    REZEPTNR: number,
+    ZUTATENNR: number,
+    MENGE: number,
+    EINHEIT: string
+}
+
+app.post("/ingredients", upload.none(), async(request: Request, response: Response) => {
+    if (!request.body.recepieId) {
+        response.status(400).json({
+            success: false,
+            errors: [
+                "Missing recepieId parameter."
+            ]
+        })
+        return;
+    }
+
+    const recepie = (await query("select * from REZEPTE where REZEPTNR = ?", [request.body.recepieId]) as Recepie[])[0];
+    if (!recepie) {
+        response.status(404).json({
+            success: false,
+            errors: [
+                "Recepie not found."
+            ]
+        })
+        return;
+    }
+    const ingredients = await query("select * from REZEPTZUTATEN where REZEPTNR = ?", [recepie.REZEPTNR]) as Ingredient[];
+    response.json(ingredients);
+})
+
+app.get("/", async(_: Request, response: Response) => {
     console.log(await query("select * from KUNDE"));
     response.status(200).send("Hello, World!");
 })

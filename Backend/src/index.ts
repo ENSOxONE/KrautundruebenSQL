@@ -1,11 +1,13 @@
 import { generateRandomHex } from "./utils/randomString";
+import { getHeader, getHtmlFile } from "./utils/html";
 import express, { Request, Response } from "express";
+import { User, Recepie, Ingredient } from "./types";
 import { sha512 } from "./utils/hashing";
+import cookieParser from "cookie-parser";
 import { query } from "./utils/db";
 import multer from 'multer';
 import path from "path";
-import { User, Recepie, Ingredient } from "./types";
-import { getHeader, getHtmlFile } from "./utils/html";
+import { validateAuthToken } from "./utils/auth";
 
 const upload = multer();
 const app = express();
@@ -19,6 +21,7 @@ app.post("/hash", async(request: Request, response: Response) => {
 
 app.use(express.static(path.join(__dirname, "www", "public")));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.post("/login", async(request: Request, response: Response) => {
 	console.log(request.body);
@@ -30,18 +33,12 @@ app.post("/login", async(request: Request, response: Response) => {
 	if (user.PASSWORDHASH == sha512(request.body.password)) {
 		const sessionToken = generateRandomHex();
 		query(`update KUNDE set SESSIONTOKEN = ? where KUNDENNR = ?`, [sessionToken, user.KUNDENNR]);
-		response.cookie("auth", sessionToken).status(200).json({
-			success: true
-		});
+		response.cookie("auth", sessionToken).status(200).redirect("/");
 		return;
 	} else {
 		response.status(403).redirect("/loginerror.html?errormessage=Invalid Password.")
 		return;
 	}
-})
-
-app.get("/recepies", async(_: Request, response: Response) => {
-	response.json(await query("select * from REZEPTE"));
 })
 
 app.get("/ingredients", async(_: Request, response: Response) => {
@@ -73,16 +70,67 @@ app.post("/ingredients", async(request: Request, response: Response) => {
 	response.json(ingredients);
 })
 
-app.get("/", (request: Request, response: Response) => {
-	console.log(request.cookies);
-	const loggedIn = false;
-	response.send(`${getHeader(loggedIn)}
-	
+app.get("/logout", (request: Request, response: Response) => {
+	query("UPDATE KUNDE SET SESSIONTOKEN = NULL WHERE SESSIONTOKEN = ?", [request.cookies.auth])
+	response.cookie("auth", "").redirect("/");
+})
+
+app.get("/", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	response.send(`${getHeader(loggedIn, "Startseite")}
+
 	<div class="container mt-5">
 		<h1>Willkommen bei Kraut & Rüben</h1>
 		<p>Entdecken Sie unsere leckeren Rezepte und Zutaten!</p>
 	</div>
 
+	${getHtmlFile("footer.html")}`)
+})
+
+app.get("/recepies", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) response.redirect("/");
+	const recepies = await query("select * from REZEPTE") as Recepie[];
+	console.log(recepies);
+	let insertHtml = "";
+	for (const recepie of recepies) {
+		insertHtml += `
+				<div class="col-md-4 mb-4">
+                    <div class="card">
+                        <img src="/assets/images/recepie${recepie.REZEPTNR}.png" class="card-img-top" alt="${recepie.REZEPT}">
+                        <div class="card-body">
+                            <h5 class="card-title">${recepie.REZEPT}</h5>
+                            <p class="card-text">Portionen: ${recepie.PORTIONEN}</p>
+                            <a href="recipe-detail?id=${recepie.REZEPTNR}" class="btn btn-primary">Details</a>
+                        </div>
+                    </div>
+                </div>
+				`
+	}
+
+	response.send(`${getHeader(loggedIn, "Rezepte")}
+
+	<div class="container mt-5">
+		<h1>Alle Rezepte</h1>
+		${insertHtml}
+	</div>
+
+	${getHtmlFile("footer.html")}`)
+})
+
+app.get("/loginerror", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	response.send(`${getHeader(loggedIn, "Login Fehler")}
+	
+	<div class="container mt-5">
+		<h1>Fehler beim Login</h1>
+		<p id="errormessage"></p>
+	</div>
+
+    <script>
+        document.getElementById("errormessage").textContent = new URLSearchParams(window.location.search).get("errormessage");
+    </script>
+	
 	${getHtmlFile("footer.html")}`)
 })
 

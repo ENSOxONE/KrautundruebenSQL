@@ -11,6 +11,12 @@
     "strict": true,
     "noImplicitAny": true,
     "skipLibCheck": true,
-    "sourceMap": true
-  }
+    "sourceMap": true,
+  },
+  "exclude": [
+    "scripts/*",
+    "dist/*",
+    "node_modules/*",
+    ".vscode/*"
+  ]
 }

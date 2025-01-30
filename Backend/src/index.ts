@@ -28,6 +28,7 @@ type User = {
     PASSWORDHASH: string
 }
 
+
 app.post("/login", upload.none(), async(request: Request, response: Response) => {
     const user = (await query(`select * from KUNDE where EMAIL = ?`, [request.body.email]) as User[])[0];
     if (!user) {

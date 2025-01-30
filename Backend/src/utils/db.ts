@@ -13,6 +13,7 @@ export async function query(query: string, values?: any[]) {
     const connection = await pool.getConnection();
     try {
         const [results] = await connection.query(query, values);
+        connection.release();
         return results;
     } catch {
         connection.release();

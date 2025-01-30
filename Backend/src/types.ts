@@ -21,6 +21,18 @@ export type Recepie = {
 }
 
 export type Ingredient = {
+    ZUTATENNR: number,
+    BEZEICHNUNG: string,
+    EINHEIT: string,
+    NETTOPREIS: number,
+    BESTAND: number,
+    LIEFERANT: number,
+    KALORIEN: number,
+    KOHLENHYDRATE: number,
+    PROTEIN: number
+}
+
+export type RecepieIngredient = {
     REZEPTNR: number,
     ZUTATENNR: number,
     MENGE: number,

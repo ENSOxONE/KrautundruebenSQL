@@ -12,7 +12,6 @@ import { CardText } from "./html_elements/CardText";
 import { CardTitle } from "./html_elements/CardTitle";
 import { RawHtml } from "./html_elements/RawHtml";
 import { ProfileInformation } from "./html_elements/ProfileInformation";
-import { match } from "assert";
 
 const app = express();
 const port = 8080;
@@ -170,13 +169,25 @@ app.get("/edit-profile", async(request: Request, response: Response) => {
 	${getHtmlFile("footer.html")}`);
 })
 
-app.post("/api/search/", async(request: Request, response: Response) => {
-	console.log(request.body);
-	/*const loggedIn = await validateAuthToken(request.cookies.auth);
+app.get("/search", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
 	if (!loggedIn) {
 		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
 		return;
-	}*/
+	}
+	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, "Suche")}
+	
+	${getHtmlFile("search.html")}
+	
+	${getHtmlFile("footer.html")}`)
+})
+
+app.post("/api/search", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
+		return;
+	}
 	const stripped = request.body.searchQuery && request.body.searchQuery.trim() || null;
 	if (!stripped || stripped == "") {
 		response.setHeader('Cache-Control', 'no-store, max-age=0').json({
@@ -187,12 +198,16 @@ app.post("/api/search/", async(request: Request, response: Response) => {
 		})
 	}
 	const matchingIngredients = await query("SELECT * FROM ZUTAT WHERE BEZEICHNUNG LIKE ?", [`%${stripped}%`]) as Ingredient[];
-	const recepies: Recepie[] = [];
+	const recepies: Recepie[] = await query("SELECT * FROM REZEPTE WHERE REZEPT LIKE ?", [`%${stripped}%`]) as Recepie[];
 	for (const v of matchingIngredients) {
 		const recepieIngredients = await query("SELECT * FROM REZEPTZUTATEN WHERE ZUTATENNR = ?", [v.ZUTATENNR]) as RecepieIngredient[];
 		for (const recepieIngredient of recepieIngredients) {
 			const recepie = (await query("SELECT * FROM REZEPTE WHERE REZEPTNR = ?", [recepieIngredient.REZEPTNR]) as Recepie[])[0];
-			if (!recepies.includes(recepie)) {
+			let includes = false;
+			recepies.forEach((_recepie: Recepie) => {
+				if (_recepie.REZEPT == recepie.REZEPT) includes = true;
+			})
+			if (!includes) {
 				recepies.push(recepie);
 			}
 		}

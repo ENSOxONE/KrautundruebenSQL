@@ -16,12 +16,6 @@ import { ProfileInformation } from "./html_elements/ProfileInformation";
 const app = express();
 const port = 8080;
 
-app.post("/hash", async(request: Request, response: Response) => {
-	response.status(200).json({
-		response: sha512(request.body.input)
-	})
-})
-
 app.use(express.static(path.join(__dirname, "www", "public")));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -30,23 +24,23 @@ app.post("/login", async(request: Request, response: Response) => {
 	console.log(request.body);
 	const user = (await query(`SELECT * FROM KUNDE WHERE EMAIL = ?`, [request.body.email]) as User[])[0];
 	if (!user) {
-		response.status(404).redirect("/loginerror.html?errormessage=User not found.")
+		response.setHeader('Cache-Control', 'no-store, max-age=0').status(404).redirect("/loginerror.html?errormessage=User not found.")
 		return;
 	}
 	if (user.PASSWORDHASH == sha512(request.body.password)) {
 		const sessionToken = generateRandomHex();
 		await query(`UPDATE KUNDE SET SESSIONTOKEN = ? WHERE KUNDENNR = ?`, [sessionToken, user.KUNDENNR]);
-		response.cookie("auth", sessionToken).status(200).redirect("/");
+		response.setHeader('Cache-Control', 'no-store, max-age=0').cookie("auth", sessionToken).status(200).redirect("/");
 		return;
 	} else {
-		response.status(403).redirect("/loginerror.html?errormessage=Invalid Password.")
+		response.setHeader('Cache-Control', 'no-store, max-age=0').status(403).redirect("/loginerror.html?errormessage=Invalid Password.")
 		return;
 	}
 })
 
 app.get("/loginerror", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
-	response.send(`${getHeader(loggedIn, "Login Fehler")}
+	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, "Login Fehler")}
 	
 	<div class="container mt-5">
 		<h1>Fehler beim Login</h1>
@@ -62,12 +56,12 @@ app.get("/loginerror", async(request: Request, response: Response) => {
 
 app.get("/logout", async(request: Request, response: Response) => {
 	await query("UPDATE KUNDE SET SESSIONTOKEN = NULL WHERE SESSIONTOKEN = ?", [request.cookies.auth]);
-	response.cookie("auth", "").redirect("/");
+	response.setHeader('Cache-Control', 'no-store, max-age=0').cookie("auth", "").redirect("/");
 })
 
 app.post("/ingredients", async(request: Request, response: Response) => {
 	if (!request.body.recepieId) {
-		response.status(400).json({
+		response.setHeader('Cache-Control', 'no-store, max-age=0').status(400).json({
 			success: false,
 			errors: [
 				"Missing recepieId parameter."
@@ -78,7 +72,7 @@ app.post("/ingredients", async(request: Request, response: Response) => {
 
 	const recepie = (await query("SELECT * FROM REZEPTE WHERE REZEPTNR = ?", [request.body.recepieId]) as Recepie[])[0];
 	if (!recepie) {
-		response.status(404).json({
+		response.setHeader('Cache-Control', 'no-store, max-age=0').status(404).json({
 			success: false,
 			errors: [
 				"Recepie not found."
@@ -87,13 +81,13 @@ app.post("/ingredients", async(request: Request, response: Response) => {
 		return;
 	}
 	const ingredients = await query("SELECT * FROM REZEPTZUTATEN WHERE REZEPTNR = ?", [recepie.REZEPTNR]) as RecepieIngredient[];
-	response.json(ingredients);
+	response.setHeader('Cache-Control', 'no-store, max-age=0').json(ingredients);
 })
 
 app.get("/ingredients", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
 	if (!loggedIn) {
-		response.redirect("/");
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
 		return;
 	}
 	const ingredients = await query("SELECT * FROM ZUTAT") as Ingredient[];
@@ -108,7 +102,7 @@ app.get("/ingredients", async(request: Request, response: Response) => {
 		insertHtml += card.getHtml() + "\n";
 	}
 
-	response.send(`${getHeader(loggedIn, "Zutaten")}
+	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, "Zutaten")}
 	
 	<div class="container mt-5">
 		<h1>Alle Zutaten</h1>
@@ -121,7 +115,7 @@ app.get("/ingredients", async(request: Request, response: Response) => {
 app.get("/recepies", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
 	if (!loggedIn) {
-		response.redirect("/");
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
 		return;
 	}
 	const recepies = await query("SELECT * FROM REZEPTE") as Recepie[];
@@ -135,7 +129,7 @@ app.get("/recepies", async(request: Request, response: Response) => {
 		insertHtml += card.getHtml() + "\n";
 	}
 
-	response.send(`${getHeader(loggedIn, "Rezepte")}
+	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, "Rezepte")}
 
 	<div class="container mt-5">
 		<h1>Alle Rezepte</h1>
@@ -148,13 +142,13 @@ app.get("/recepies", async(request: Request, response: Response) => {
 app.get("/profile", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
 	if (!loggedIn) {
-		response.redirect("/");
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
 		return;
 	}
 
 	const userObject: User = (await query("SELECT * FROM KUNDE WHERE SESSIONTOKEN = ?", [request.cookies.auth]) as User[])[0];
 
-	response.send(`${getHeader(loggedIn, "Profil")}
+	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, "Profil")}
 
 	${new ProfileInformation(userObject).getHtml()}
 
@@ -164,11 +158,11 @@ app.get("/profile", async(request: Request, response: Response) => {
 app.get("/edit-profile", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
 	if (!loggedIn) {
-		response.redirect("/");
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
 		return;
 	}
 
-	response.send(`${getHeader(loggedIn, "Profil Bearbeiten")}
+	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, "Profil Bearbeiten")}
 	
 	${getHtmlFile("edit-profile.html")}
 	
@@ -178,13 +172,13 @@ app.get("/edit-profile", async(request: Request, response: Response) => {
 app.get("/api/profile-information", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
 	if (!loggedIn) {
-		response.redirect("/");
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
 		return;
 	}
 
 	const userObject: User = (await query("SELECT * FROM KUNDE WHERE SESSIONTOKEN = ?", [request.cookies.auth]) as User[])[0];
 
-	response.json({
+	response.setHeader('Cache-Control', 'no-store, max-age=0').json({
 		firstName: userObject.VORNAME,
 		lastName: userObject.NACHNAME,
 		email: userObject.EMAIL,
@@ -196,15 +190,25 @@ app.get("/api/profile-information", async(request: Request, response: Response) 
 	})
 })
 
-app.post("/api/update-profile", (request: Request, response: Response) => {
-	console.log(request.body);
-	response.status(404).json({});
+app.post("/api/update-profile", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
+		return;
+	}
+	const passwordCorrect: boolean = (await query("SELECT * FROM KUNDE WHERE PASSWORDHASH = ?", [sha512(request.body.password)]) as User[]).length > 0;
+	if (!passwordCorrect) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').status(403).contentType("text/plain").send("Incorrect password!");
+		return;
+	}
+	await query("UPDATE KUNDE SET NACHNAME = ?, VORNAME = ?, STRASSE = ?, HAUSNR = ?, PLZ = ?, TELEFON = ?, EMAIL = ? WHERE SESSIONTOKEN = ?", [request.body.lastName, request.body.firstName, request.body.street, request.body.houseNumber, request.body.postalCode, request.body.phone, request.body.email, request.cookies.auth]);
+	response.setHeader('Cache-Control', 'no-store, max-age=0').status(200).json({});
 })
 
 app.get("/", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
 
-	response.send(`${getHeader(loggedIn, "Startseite")}
+	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, "Startseite")}
 
 	<div class="container mt-5">
 		<h1>Willkommen bei Kraut & Rüben</h1>

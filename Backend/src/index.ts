@@ -5,11 +5,14 @@ import { User, Recepie, Ingredient, RecepieIngredient } from "./types";
 import { sha512 } from "./utils/hashing";
 import cookieParser from "cookie-parser";
 import { query } from "./utils/db";
-import multer from 'multer';
 import path from "path";
 import { validateAuthToken } from "./utils/auth";
+import { Card } from "./html_elements/Card";
+import { CardText } from "./html_elements/CardText";
+import { CardTitle } from "./html_elements/CardTitle";
+import { RawHtml } from "./html_elements/RawHtml";
+import { ProfileInformation } from "./html_elements/ProfileInformation";
 
-const upload = multer();
 const app = express();
 const port = 8080;
 
@@ -32,7 +35,7 @@ app.post("/login", async(request: Request, response: Response) => {
 	}
 	if (user.PASSWORDHASH == sha512(request.body.password)) {
 		const sessionToken = generateRandomHex();
-		query(`UPDATE KUNDE SET SESSIONTOKEN = ? WHERE KUNDENNR = ?`, [sessionToken, user.KUNDENNR]);
+		await query(`UPDATE KUNDE SET SESSIONTOKEN = ? WHERE KUNDENNR = ?`, [sessionToken, user.KUNDENNR]);
 		response.cookie("auth", sessionToken).status(200).redirect("/");
 		return;
 	} else {
@@ -57,8 +60,8 @@ app.get("/loginerror", async(request: Request, response: Response) => {
 	${getHtmlFile("footer.html")}`);
 })
 
-app.get("/logout", (request: Request, response: Response) => {
-	query("UPDATE KUNDE SET SESSIONTOKEN = NULL WHERE SESSIONTOKEN = ?", [request.cookies.auth]);
+app.get("/logout", async(request: Request, response: Response) => {
+	await query("UPDATE KUNDE SET SESSIONTOKEN = NULL WHERE SESSIONTOKEN = ?", [request.cookies.auth]);
 	response.cookie("auth", "").redirect("/");
 })
 
@@ -97,17 +100,12 @@ app.get("/ingredients", async(request: Request, response: Response) => {
 	let insertHtml = "";
 
 	for (const ingredient of ingredients) {
-		insertHtml += `<div class="col-md-4 mb-4">
-                <div class="card">
-                    <img src="assets/images/ingredient${ingredient.ZUTATENNR}.png" class="card-img-top" alt="${ingredient.BEZEICHNUNG}">
-                    <div class="card-body">
-                        <h5 class="card-title">${ingredient.BEZEICHNUNG}</h5>
-                        <p class="card-text">Preis: ${ingredient.NETTOPREIS}€</p>
-                        <a href="ingredient-detail.php?id=${ingredient.ZUTATENNR}" class="btn btn-primary">Details</a>
-                    </div>
-                </div>
-            </div>
-			`;
+		const card: Card = new Card();
+		card.addElement(new CardTitle(ingredient.BEZEICHNUNG));
+		card.addElement(new CardText(`Preis: ${ingredient.NETTOPREIS}`));
+		card.addElement(new RawHtml(`<a href="ingredient-detail.php?id=${ingredient.ZUTATENNR}" class="btn btn-primary">Details</a>`));
+		card.setImage(`assets/images/ingredient${ingredient.ZUTATENNR}.png`, ingredient.BEZEICHNUNG)
+		insertHtml += card.getHtml() + "\n";
 	}
 
 	response.send(`${getHeader(loggedIn, "Zutaten")}
@@ -129,18 +127,12 @@ app.get("/recepies", async(request: Request, response: Response) => {
 	const recepies = await query("SELECT * FROM REZEPTE") as Recepie[];
 	let insertHtml = "";
 	for (const recepie of recepies) {
-		insertHtml += `
-				<div class="col-md-4 mb-4">
-                    <div class="card">
-                        <img src="/assets/images/recepie${recepie.REZEPTNR}.png" class="card-img-top" alt="${recepie.REZEPT}">
-                        <div class="card-body">
-                            <h5 class="card-title">${recepie.REZEPT}</h5>
-                            <p class="card-text">Portionen: ${recepie.PORTIONEN}</p>
-                            <a href="recipe-detail?id=${recepie.REZEPTNR}" class="btn btn-primary">Details</a>
-                        </div>
-                    </div>
-                </div>
-				`;
+		const card: Card = new Card();
+		card.addElement(new CardTitle(recepie.REZEPT));
+		card.addElement(new CardText(`Portionen: ${recepie.PORTIONEN}`));
+		card.addElement(new RawHtml(`<a href="recipe-detail?id=${recepie.REZEPTNR}" class="btn btn-primary">Details</a>`));
+		card.setImage(`assets/images/recepie${recepie.REZEPTNR}.png`, recepie.REZEPT)
+		insertHtml += card.getHtml() + "\n";
 	}
 
 	response.send(`${getHeader(loggedIn, "Rezepte")}
@@ -153,11 +145,65 @@ app.get("/recepies", async(request: Request, response: Response) => {
 	${getHtmlFile("footer.html")}`);
 })
 
-app.get("/", async(request: Request, response: Response) => {
-	console.log("validate start");
+app.get("/profile", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
-	console.log("validate end");
-	console.log("send start");
+	if (!loggedIn) {
+		response.redirect("/");
+		return;
+	}
+
+	const userObject: User = (await query("SELECT * FROM KUNDE WHERE SESSIONTOKEN = ?", [request.cookies.auth]) as User[])[0];
+
+	response.send(`${getHeader(loggedIn, "Profil")}
+
+	${new ProfileInformation(userObject).getHtml()}
+
+	${getHtmlFile("footer.html")}`);
+})
+
+app.get("/edit-profile", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.redirect("/");
+		return;
+	}
+
+	response.send(`${getHeader(loggedIn, "Profil Bearbeiten")}
+	
+	${getHtmlFile("edit-profile.html")}
+	
+	${getHtmlFile("footer.html")}`);
+})
+
+app.get("/api/profile-information", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.redirect("/");
+		return;
+	}
+
+	const userObject: User = (await query("SELECT * FROM KUNDE WHERE SESSIONTOKEN = ?", [request.cookies.auth]) as User[])[0];
+
+	response.json({
+		firstName: userObject.VORNAME,
+		lastName: userObject.NACHNAME,
+		email: userObject.EMAIL,
+		street: userObject.STRASSE,
+		houseNumber: userObject.HAUSNR,
+		postalCode: userObject.PLZ,
+		city: userObject.ORT,
+		phone: userObject.TELEFON
+	})
+})
+
+app.post("/api/update-profile", (request: Request, response: Response) => {
+	console.log(request.body);
+	response.status(404).json({});
+})
+
+app.get("/", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+
 	response.send(`${getHeader(loggedIn, "Startseite")}
 
 	<div class="container mt-5">
@@ -166,7 +212,6 @@ app.get("/", async(request: Request, response: Response) => {
 	</div>
 
 	${getHtmlFile("footer.html")}`);
-	console.log("send end");
 })
 
 app.listen(port, () => {

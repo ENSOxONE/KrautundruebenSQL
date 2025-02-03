@@ -33,3 +33,24 @@ body {
     height: 200px;
     object-fit: cover;
 }
+
+.avatar {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card {
+    border-radius: 0.5rem;
+}
+
+dt {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+dd {
+    font-weight: 500;
+}

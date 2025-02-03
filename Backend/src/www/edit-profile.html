@@ -1,0 +1,172 @@
+<main class="container mt-5">
+	<div class="row justify-content-center">
+		<div class="col-md-8">
+			<h1 class="mb-4">Profil bearbeiten</h1>
+			
+			<!-- Edit Form -->
+			<form id="editProfileForm">
+				<div class="row g-3">
+					<!-- Existing name fields -->
+					<div class="col-md-6">
+						<label for="firstName" class="form-label">Vorname</label>
+						<input type="text" class="form-control" id="firstName" name="firstName" required>
+					</div>
+					
+					<div class="col-md-6">
+						<label for="lastName" class="form-label">Nachname</label>
+						<input type="text" class="form-control" id="lastName" name="lastName" required>
+					</div>
+			
+					<!-- Address Fields -->
+					<div class="col-12">
+						<h5 class="mt-4 mb-3">Adresse</h5>
+						<div class="row g-3">
+							<div class="col-md-8">
+								<label for="street" class="form-label">Straße</label>
+								<input type="text" class="form-control" id="street" name="street" required>
+							</div>
+							
+							<div class="col-md-4">
+								<label for="houseNumber" class="form-label">Hausnummer</label>
+								<input type="text" class="form-control" id="houseNumber" name="houseNumber" required>
+							</div>
+			
+							<div class="col-md-3">
+								<label for="postalCode" class="form-label">Postleitzahl</label>
+								<input type="text" class="form-control" id="postalCode" 
+									   pattern="[0-9]{5}" maxlength="5" name="postalCode" required>
+							</div>
+			
+							<div class="col-md-9">
+								<label for="city" class="form-label">Ort</label>
+								<input type="text" class="form-control" id="city" name="city" required>
+							</div>
+						</div>
+					</div>
+			
+					<!-- Other fields -->
+					<div class="col-md-6">
+						<label for="email" class="form-label">E-Mail</label>
+						<input type="email" class="form-control" id="email-field" name="email" required>
+					</div>
+			
+					<div class="col-md-6">
+						<label for="phone" class="form-label">Telefon</label>
+						<input type="tel" class="form-control" id="phone" name="phone" required>
+					</div>
+			
+					<!-- Submit button -->
+					<div class="col-12 text-end">
+						<button type="submit" class="btn btn-primary">
+							Änderungen speichern
+						</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+</main>
+
+<!-- Password Confirm Modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Passwort bestätigen</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+			</div>
+			<div class="modal-body">
+				<form id="passwordForm">
+					<div class="mb-3">
+						<label for="password" class="form-label">Passwort</label>
+						<input type="password" class="form-control" id="password" required>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+				<button type="button" class="btn btn-primary" id="confirmChanges">
+					Änderungen bestätigen
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Same footer and scripts -->
+
+<script>
+	// Pre-fill form with current user data
+	document.addEventListener('DOMContentLoaded', async() => {
+		const response = await fetch('/api/profile-information');
+        const userData = await response.json();
+
+		// Set form values
+		document.getElementById('houseNumber').value = userData.houseNumber;
+		document.getElementById('postalCode').value = userData.postalCode;
+		document.getElementById('firstName').value = userData.firstName;
+		document.getElementById('email-field').value = userData.email;
+		document.getElementById('lastName').value = userData.lastName;
+		document.getElementById('street').value = userData.street;
+		document.getElementById('phone').value = userData.phone;
+		document.getElementById('city').value = userData.city;
+	});
+
+	// Handle form submission
+	document.getElementById('editProfileForm').addEventListener('submit', (e) => {
+		e.preventDefault();
+		$('#passwordModal').modal('show');
+	});
+
+	document.getElementById('confirmChanges').addEventListener('click', async () => {
+        try {
+            // Collect form data
+            const data = {
+                houseNumber: document.getElementById('houseNumber').value,
+                postalCode: document.getElementById('postalCode').value,
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email-field').value,
+                password: document.getElementById('password').value,
+                street: document.getElementById('street').value,
+                phone: document.getElementById('phone').value,
+                city: document.getElementById('city').value
+            };
+
+            // Validate postal code
+            if (!/^\d{5}$/.test(data.postalCode)) {
+                alert("Ungültige Postleitzahl");
+                return;
+            }
+
+            // Create URL-encoded string
+            const formBody = new URLSearchParams();
+            for (const [key, value] of Object.entries(data)) {
+                formBody.append(key, value);
+            }
+
+            // Debug: log the encoded string
+            console.log('Sending:', formBody.toString());
+
+            const response = await fetch('/api/update-profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                },
+                body: formBody.toString()
+            });
+
+            if (response.ok) {
+                window.location.href = '/profile';
+            } else {
+                const error = await response.text();
+                alert(`Fehler: ${error}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Ein Fehler ist aufgetreten');
+        } finally {
+            $('#passwordModal').modal('hide');
+        }
+    });
+</script>

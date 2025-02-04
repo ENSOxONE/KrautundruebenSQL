@@ -18,16 +18,16 @@
     <!-- Results Container -->
     <div id="resultsContainer" class="d-none">
         <div class="row g-4">
-            <!-- Ingredients Column -->
-            <div class="col-md-6">
-                <h3 class="mb-3">Gefundene Zutaten</h3>
-                <div class="row g-4" id="ingredientsResults"></div>
-            </div>
-
             <!-- Recipes Column -->
             <div class="col-md-6">
                 <h3 class="mb-3">Gefundene Rezepte</h3>
                 <div class="row g-4" id="recipesResults"></div>
+            </div>
+
+            <!-- Ingredients Column -->
+            <div class="col-md-6">
+                <h3 class="mb-3">Gefundene Zutaten</h3>
+                <div class="row g-4" id="ingredientsResults"></div>
             </div>
         </div>
     </div>
@@ -68,27 +68,6 @@
         document.getElementById('ingredientsResults').innerHTML = '';
         document.getElementById('recipesResults').innerHTML = '';
 
-        ingredients.forEach(ingredient => {
-            const html = `
-                <div class="col-md-12 mb-4">
-                    <div class="card">
-                        <img src="assets/images/ingredient${ingredient.ZUTATENNR}.png" 
-                                class="card-img-top" 
-                                alt="${ingredient.BEZEICHNUNG}">
-                        <div class="card-body">
-                            <h5 class="card-title">${ingredient.BEZEICHNUNG}</h5>
-                            <p class="card-text">Preis: €${parseFloat(ingredient.NETTOPREIS).toFixed(2)}</p>
-                            <a href="ingredient-detail?id=${ingredient.ZUTATENNR}" 
-                                class="btn btn-primary">
-                                Details
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.getElementById('ingredientsResults').innerHTML += html;
-        });
-
         recipes.forEach(recipe => {
             const html = `
                 <div class="col-md-12 mb-4">
@@ -108,6 +87,27 @@
                 </div>
             `;
             document.getElementById('recipesResults').innerHTML += html;
+        });
+
+        ingredients.forEach(ingredient => {
+            const html = `
+                <div class="col-md-12 mb-4">
+                    <div class="card">
+                        <img src="assets/images/ingredient${ingredient.ZUTATENNR}.png" 
+                                class="card-img-top" 
+                                alt="${ingredient.BEZEICHNUNG}">
+                        <div class="card-body">
+                            <h5 class="card-title">${ingredient.BEZEICHNUNG}</h5>
+                            <p class="card-text">Preis: €${parseFloat(ingredient.NETTOPREIS).toFixed(2)}</p>
+                            <a href="ingredient-detail?id=${ingredient.ZUTATENNR}" 
+                                class="btn btn-primary">
+                                Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('ingredientsResults').innerHTML += html;
         });
     }
 

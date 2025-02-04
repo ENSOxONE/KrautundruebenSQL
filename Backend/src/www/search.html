@@ -61,15 +61,13 @@
         }
     }
 
-    function displayResults({ ingredients, recepies }) {
+    function displayResults({ ingredients, recipes }) {
         const container = document.getElementById('resultsContainer');
         container.classList.remove('d-none');
 
-        // Clear previous results
         document.getElementById('ingredientsResults').innerHTML = '';
         document.getElementById('recipesResults').innerHTML = '';
 
-        // Display ingredients
         ingredients.forEach(ingredient => {
             const html = `
                 <div class="col-md-12 mb-4">
@@ -80,7 +78,7 @@
                         <div class="card-body">
                             <h5 class="card-title">${ingredient.BEZEICHNUNG}</h5>
                             <p class="card-text">Preis: €${parseFloat(ingredient.NETTOPREIS).toFixed(2)}</p>
-                            <a href="ingredient-detail.php?id=${ingredient.ZUTATENNR}" 
+                            <a href="ingredient-detail?id=${ingredient.ZUTATENNR}" 
                                 class="btn btn-primary">
                                 Details
                             </a>
@@ -91,12 +89,11 @@
             document.getElementById('ingredientsResults').innerHTML += html;
         });
 
-        // Display recipes
-        recepies.forEach(recipe => {
+        recipes.forEach(recipe => {
             const html = `
                 <div class="col-md-12 mb-4">
                     <div class="card">
-                        <img src="assets/images/recepie${recipe.REZEPTNR}.png" 
+                        <img src="assets/images/recipe${recipe.REZEPTNR}.png" 
                                 class="card-img-top" 
                                 alt="${recipe.REZEPT}">
                         <div class="card-body">
@@ -114,7 +111,6 @@
         });
     }
 
-    // Event Listeners
     document.getElementById('searchButton').addEventListener('click', performSearch);
     document.getElementById('searchInput').addEventListener('keyup', (e) => {
         if (e.key === 'Enter') performSearch();

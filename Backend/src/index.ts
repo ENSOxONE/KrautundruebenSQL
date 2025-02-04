@@ -1,7 +1,7 @@
 import { generateRandomHex } from "./utils/randomString";
 import { getHeader, getHtmlFile } from "./utils/html";
 import express, { Request, Response } from "express";
-import { User, Recepie, Ingredient, RecepieIngredient } from "./types";
+import { User, Recipe, Ingredient, RecipeIngredient, Supplier, ApiIngredient } from "./types";
 import { sha512 } from "./utils/hashing";
 import cookieParser from "cookie-parser";
 import { query } from "./utils/db";
@@ -21,7 +21,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.post("/login", async(request: Request, response: Response) => {
-	console.log(request.body);
 	const user = (await query(`SELECT * FROM KUNDE WHERE EMAIL = ?`, [request.body.email]) as User[])[0];
 	if (!user) {
 		response.setHeader('Cache-Control', 'no-store, max-age=0').status(404).redirect("/loginerror.html?errormessage=User not found.")
@@ -60,28 +59,150 @@ app.get("/logout", async(request: Request, response: Response) => {
 })
 
 app.post("/ingredients", async(request: Request, response: Response) => {
-	if (!request.body.recepieId) {
+	if (!request.body.recipeId) {
 		response.setHeader('Cache-Control', 'no-store, max-age=0').status(400).json({
 			success: false,
 			errors: [
-				"Missing recepieId parameter."
+				"Missing recipeId parameter."
 			]
 		})
 		return;
 	}
 
-	const recepie = (await query("SELECT * FROM REZEPTE WHERE REZEPTNR = ?", [request.body.recepieId]) as Recepie[])[0];
-	if (!recepie) {
+	const recipe = (await query("SELECT * FROM REZEPTE WHERE REZEPTNR = ?", [request.body.recipeId]) as Recipe[])[0];
+	if (!recipe) {
 		response.setHeader('Cache-Control', 'no-store, max-age=0').status(404).json({
 			success: false,
 			errors: [
-				"Recepie not found."
+				"Recipe not found."
 			]
 		})
 		return;
 	}
-	const ingredients = await query("SELECT * FROM REZEPTZUTATEN WHERE REZEPTNR = ?", [recepie.REZEPTNR]) as RecepieIngredient[];
+	const ingredients = await query("SELECT * FROM REZEPTZUTATEN WHERE REZEPTNR = ?", [recipe.REZEPTNR]) as RecipeIngredient[];
 	response.setHeader('Cache-Control', 'no-store, max-age=0').json(ingredients);
+})
+
+app.get("/ingredient-detail", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
+		return;
+	}
+	const ingredient: Ingredient = (await query("SELECT * FROM ZUTAT WHERE ZUTATENNR = ?", [request.query.id]) as Ingredient[])[0];
+	if (!ingredient) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
+		return;
+	}
+	const supplier: Supplier = (await query("SELECT * FROM LIEFERANT WHERE LIEFERANTENNR = ?", [ingredient.LIEFERANT]) as Supplier[])[0];
+	const card: Card = new Card();
+	card.addElement(new CardTitle(ingredient.BEZEICHNUNG));
+	card.addElement(new CardText(`Preis: ${ingredient.NETTOPREIS}€`));
+	card.addElement(new CardText(`Kohlenhydrate: ${ingredient.KOHLENHYDRATE}`));
+	card.addElement(new CardText(`Protein: ${ingredient.PROTEIN}`));
+	card.addElement(new RawHtml(`<a href="/ingredients" class="btn btn-primary">Zurück</a>`));
+	card.setImage(`assets/images/ingredient${ingredient.ZUTATENNR}.png`, ingredient.BEZEICHNUNG);
+	const supplierCard: Card = new Card();
+	supplierCard.addElement(new CardTitle("Lieferant"));
+	supplierCard.addElement(new CardText(`Name: ${supplier.LIEFERANTENNAME}`));
+	supplierCard.addElement(new CardText(`Email: ${supplier.EMAIL}`));
+	supplierCard.addElement(new CardText(`Telefon: ${supplier.TELEFON}`));
+	supplierCard.addElement(new CardText(`Addresse: ${supplier.STRASSE} ${supplier.HAUSNR}, ${supplier.PLZ} ${supplier.ORT}`));
+	supplierCard.addElement(new RawHtml(`<a href="/ingredients" class="btn btn-primary">Zurück</a>`));
+	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, ingredient.BEZEICHNUNG)}
+	
+	${card.getHtml()}
+	${supplierCard.getHtml()}
+	
+	${getHtmlFile("footer.html")}`);
+})
+
+app.get("/api/recipe/:recipeId", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+			success: false,
+			errors: [
+				"Not authenticated"
+			]
+		});
+		return;
+	}
+
+	const recipe: Recipe = (await query("SELECT * FROM REZEPTE WHERE REZEPTNR = ?", [request.params.recipeId]) as Recipe[])[0];
+	if (!recipe) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+			success: false,
+			errors: [
+				"Recipe not found"
+			]
+		});
+		return;
+	}
+	response.setHeader('Cache-Control', 'no-store, max-age=0').json(recipe);
+})
+
+app.get("/api/recipe/:recipeId/ingredients", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+			success: false,
+			errors: [
+				"Not authenticated"
+			]
+		});
+		return;
+	}
+
+	const recipe: Recipe = (await query("SELECT * FROM REZEPTE WHERE REZEPTNR = ?", [request.params.recipeId]) as Recipe[])[0];
+	if (!recipe) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+			success: false,
+			errors: [
+				"Recipe not found"
+			]
+		});
+		return;
+	}
+
+	const ingredients: RecipeIngredient[] = await query("SELECT * FROM REZEPTZUTATEN WHERE REZEPTNR = ?", [recipe.REZEPTNR]) as RecipeIngredient[];
+	if (!ingredients) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+			success: false,
+			errors: [
+				"Ingredients not found"
+			]
+		});
+		return;
+	}
+
+	const returnIngredients: ApiIngredient[] = [];
+	for (const ingredient of ingredients) {
+		const realIngredient: Ingredient = (await query("SELECT * FROM ZUTAT WHERE ZUTATENNR = ?", [ingredient.ZUTATENNR]) as Ingredient[])[0];
+		returnIngredients.push({
+			BEZEICHNUNG: realIngredient.BEZEICHNUNG,
+			EINHEIT: ingredient.EINHEIT,
+			MENGE: ingredient.MENGE
+		})
+	}
+
+	response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+		success: true,
+		result: returnIngredients
+	});
+})
+
+app.get("/recipe-detail", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
+		return;
+	}
+	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, "Rezept")}
+	
+	${getHtmlFile("recipe-detail.html")}
+	
+	${getHtmlFile("footer.html")}`)
 })
 
 app.get("/ingredients", async(request: Request, response: Response) => {
@@ -97,7 +218,7 @@ app.get("/ingredients", async(request: Request, response: Response) => {
 		const card: Card = new Card();
 		card.addElement(new CardTitle(ingredient.BEZEICHNUNG));
 		card.addElement(new CardText(`Preis: ${ingredient.NETTOPREIS}`));
-		card.addElement(new RawHtml(`<a href="ingredient-detail.php?id=${ingredient.ZUTATENNR}" class="btn btn-primary">Details</a>`));
+		card.addElement(new RawHtml(`<a href="ingredient-detail?id=${ingredient.ZUTATENNR}" class="btn btn-primary">Details</a>`));
 		card.setImage(`assets/images/ingredient${ingredient.ZUTATENNR}.png`, ingredient.BEZEICHNUNG)
 		insertHtml += card.getHtml() + "\n";
 	}
@@ -112,20 +233,20 @@ app.get("/ingredients", async(request: Request, response: Response) => {
 	${getHtmlFile("footer.html")}`)
 })
 
-app.get("/recepies", async(request: Request, response: Response) => {
+app.get("/recipes", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
 	if (!loggedIn) {
 		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
 		return;
 	}
-	const recepies = await query("SELECT * FROM REZEPTE") as Recepie[];
+	const recipes = await query("SELECT * FROM REZEPTE") as Recipe[];
 	let insertHtml = "";
-	for (const recepie of recepies) {
+	for (const recipe of recipes) {
 		const card: Card = new Card();
-		card.addElement(new CardTitle(recepie.REZEPT));
-		card.addElement(new CardText(`Portionen: ${recepie.PORTIONEN}`));
-		card.addElement(new RawHtml(`<a href="recipe-detail?id=${recepie.REZEPTNR}" class="btn btn-primary">Details</a>`));
-		card.setImage(`assets/images/recepie${recepie.REZEPTNR}.png`, recepie.REZEPT)
+		card.addElement(new CardTitle(recipe.REZEPT));
+		card.addElement(new CardText(`Portionen: ${recipe.PORTIONEN}`));
+		card.addElement(new RawHtml(`<a href="recipe-detail?id=${recipe.REZEPTNR}" class="btn btn-primary">Details</a>`));
+		card.setImage(`assets/images/recipe${recipe.REZEPTNR}.png`, recipe.REZEPT)
 		insertHtml += card.getHtml() + "\n";
 	}
 
@@ -198,17 +319,17 @@ app.post("/api/search", async(request: Request, response: Response) => {
 		})
 	}
 	const matchingIngredients = await query("SELECT * FROM ZUTAT WHERE BEZEICHNUNG LIKE ?", [`%${stripped}%`]) as Ingredient[];
-	const recepies: Recepie[] = await query("SELECT * FROM REZEPTE WHERE REZEPT LIKE ?", [`%${stripped}%`]) as Recepie[];
+	const recipes: Recipe[] = await query("SELECT * FROM REZEPTE WHERE REZEPT LIKE ?", [`%${stripped}%`]) as Recipe[];
 	for (const v of matchingIngredients) {
-		const recepieIngredients = await query("SELECT * FROM REZEPTZUTATEN WHERE ZUTATENNR = ?", [v.ZUTATENNR]) as RecepieIngredient[];
-		for (const recepieIngredient of recepieIngredients) {
-			const recepie = (await query("SELECT * FROM REZEPTE WHERE REZEPTNR = ?", [recepieIngredient.REZEPTNR]) as Recepie[])[0];
+		const recipeIngredients = await query("SELECT * FROM REZEPTZUTATEN WHERE ZUTATENNR = ?", [v.ZUTATENNR]) as RecipeIngredient[];
+		for (const recipeIngredient of recipeIngredients) {
+			const recipe = (await query("SELECT * FROM REZEPTE WHERE REZEPTNR = ?", [recipeIngredient.REZEPTNR]) as Recipe[])[0];
 			let includes = false;
-			recepies.forEach((_recepie: Recepie) => {
-				if (_recepie.REZEPT == recepie.REZEPT) includes = true;
+			recipes.forEach((_recipe: Recipe) => {
+				if (_recipe.REZEPT == recipe.REZEPT) includes = true;
 			})
 			if (!includes) {
-				recepies.push(recepie);
+				recipes.push(recipe);
 			}
 		}
 	}
@@ -216,7 +337,7 @@ app.post("/api/search", async(request: Request, response: Response) => {
 		success: true,
 		results: {
 			ingredients: matchingIngredients,
-			recepies: recepies
+			recipes: recipes
 		}
 	})
 })

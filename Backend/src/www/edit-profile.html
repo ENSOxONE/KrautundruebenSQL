@@ -96,14 +96,12 @@
 <!-- Same footer and scripts -->
 
 <script>
-	// Pre-fill form with current user data
 	document.addEventListener('DOMContentLoaded', async() => {
 		const response = await fetch('/api/profile-information', {
 			cache: "no-cache"
 		});
         const userData = await response.json();
 
-		// Set form values
 		document.getElementById('houseNumber').value = userData.houseNumber;
 		document.getElementById('postalCode').value = userData.postalCode;
 		document.getElementById('firstName').value = userData.firstName;
@@ -114,7 +112,6 @@
 		document.getElementById('city').value = userData.city;
 	});
 
-	// Handle form submission
 	document.getElementById('editProfileForm').addEventListener('submit', (e) => {
 		e.preventDefault();
 		$('#passwordModal').modal('show');
@@ -122,7 +119,6 @@
 
 	document.getElementById('confirmChanges').addEventListener('click', async () => {
         try {
-            // Collect form data
             const data = {
                 houseNumber: document.getElementById('houseNumber').value,
                 password: document.getElementById('password-field').value,
@@ -135,20 +131,15 @@
                 city: document.getElementById('city').value
             };
 
-            // Validate postal code
             if (!/^\d{5}$/.test(data.postalCode)) {
                 alert("Ungültige Postleitzahl");
                 return;
             }
 
-            // Create URL-encoded string
             const formBody = new URLSearchParams();
             for (const [key, value] of Object.entries(data)) {
                 formBody.append(key, value);
             }
-
-            // Debug: log the encoded string
-            console.log('Sending:', formBody.toString());
 
             const response = await fetch('/api/update-profile', {
                 method: 'POST',

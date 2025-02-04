@@ -13,7 +13,7 @@ export type User = {
     SESSIONTOKEN: string
 }
 
-export type Recepie = {
+export type Recipe = {
     REZEPTNR: number,
     REZEPT: string,
     ZUBEREITUNG: string,
@@ -32,9 +32,26 @@ export type Ingredient = {
     PROTEIN: number
 }
 
-export type RecepieIngredient = {
+export type RecipeIngredient = {
     REZEPTNR: number,
     ZUTATENNR: number,
     MENGE: number,
     EINHEIT: string
+}
+
+export type ApiIngredient = {
+    BEZEICHNUNG: string,
+    EINHEIT: string,
+    MENGE: number
+}
+
+export type Supplier = {
+    LIEFERANTENNR: number,
+    LIEFERANTENNAME: string,
+    STRASSE: string,
+    HAUSNR: number,
+    PLZ: string,
+    ORT: string,
+    TELEFON: string,
+    EMAIL: string
 }

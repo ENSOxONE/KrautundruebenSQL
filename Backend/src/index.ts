@@ -111,8 +111,67 @@ app.get("/ingredient-detail", async(request: Request, response: Response) => {
 	supplierCard.addElement(new RawHtml(`<a href="/ingredients" class="btn btn-primary">Zurück</a>`));
 	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, ingredient.BEZEICHNUNG)}
 	
-	${card.getHtml()}
-	${supplierCard.getHtml()}
+<div class="container">
+  <h1>Alle Zutaten</h1>
+  <div class="row g-4">
+    <!-- First Card -->
+    <div class="col-md-8">
+      <div id="recipesResults">
+        <div class="card border-0 custom-card"> <!-- Add custom-card class -->
+          <div class="row g-0">
+            <!-- Image Column -->
+            <div class="col-md-4 position-relative">
+              <img src="assets/images/ingredient1001.png" class="img-fluid h-100 rounded-start" alt="Zucchini">
+              <!-- Gradient overlay -->
+              <div class="gradient-overlay-right"></div>
+            </div>
+            <!-- Content Column -->
+            <div class="col-md-8 ps-4">
+              <div class="card-body">
+                <h5 class="card-title mb-4">Zucchini</h5>
+                <p class="card-text">Preis: 0.89€</p>
+                <p class="card-text">Kohlenhydrate: 2.00</p>
+                <p class="card-text">Protein: 1.60</p>
+                <div class="mt-4">
+                  <a href="/ingredients" class="btn btn-primary">Zurück</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supplier Card -->
+    <div class="col-md-4">
+      <div id="ingredientsResults">
+        ${supplierCard.getHtml()} <!-- This remains unchanged -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Custom styles for the first card */
+  .custom-card {
+    overflow: hidden; /* Contain the gradient overlay */
+  }
+
+  .gradient-overlay-right::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 30px;
+    background: linear-gradient(90deg, transparent 0%, var(--bs-body-bg) 100%); /* Use body background color */
+    pointer-events: none;
+  }
+
+  .rounded-start {
+    border-radius: var(--bs-card-border-radius) 0 0 var(--bs-card-border-radius) !important;
+  }
+</style>
 	
 	${getHtmlFile("footer.html")}`);
 })
@@ -212,22 +271,35 @@ app.get("/ingredients", async(request: Request, response: Response) => {
 		return;
 	}
 	const ingredients = await query("SELECT * FROM ZUTAT") as Ingredient[];
-	let insertHtml = "";
-
+	let insertHtml1 = "";
+	let insertHtml2 = "";
+	let i = 0;
 	for (const ingredient of ingredients) {
 		const card: Card = new Card();
 		card.addElement(new CardTitle(ingredient.BEZEICHNUNG));
 		card.addElement(new CardText(`Preis: ${ingredient.NETTOPREIS}`));
 		card.addElement(new RawHtml(`<a href="ingredient-detail?id=${ingredient.ZUTATENNR}" class="btn btn-primary">Details</a>`));
 		card.setImage(`assets/images/ingredient${ingredient.ZUTATENNR}.png`, ingredient.BEZEICHNUNG)
-		insertHtml += card.getHtml() + "\n";
+		if (i % 2 == 0) {
+			insertHtml1 += card.getHtml() + "\n";
+		} else {
+			insertHtml2 += card.getHtml() + "\n";
+		}
+		i++;
 	}
 
 	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, "Zutaten")}
 	
-	<div class="container mt-5">
+	<div class="container"> <!-- Add container here -->
 		<h1>Alle Zutaten</h1>
-		${insertHtml}
+		<div class="row g-4">
+			<div class="col-md-6">
+			<div class="row g-4" id="recipesResults">${insertHtml1}</div>
+		</div>
+			<div class="col-md-6">
+			<div class="row g-4" id="ingredientsResults">${insertHtml2}</div>
+		</div>
+		</div>
 	</div>
 	
 	${getHtmlFile("footer.html")}`)
@@ -240,21 +312,37 @@ app.get("/recipes", async(request: Request, response: Response) => {
 		return;
 	}
 	const recipes = await query("SELECT * FROM REZEPTE") as Recipe[];
-	let insertHtml = "";
+	let insertHtml1 = "";
+	let insertHtml2 = "";
+	let i = 0;
 	for (const recipe of recipes) {
 		const card: Card = new Card();
 		card.addElement(new CardTitle(recipe.REZEPT));
-		card.addElement(new CardText(`Portionen: ${recipe.PORTIONEN}`));
 		card.addElement(new RawHtml(`<a href="recipe-detail?id=${recipe.REZEPTNR}" class="btn btn-primary">Details</a>`));
 		card.setImage(`assets/images/recipe${recipe.REZEPTNR}.png`, recipe.REZEPT)
-		insertHtml += card.getHtml() + "\n";
+		if (i % 2 == 0) {
+			insertHtml1 += card.getHtml() + "\n";
+		} else {
+			insertHtml2 += card.getHtml() + "\n";
+		}
+		i++;
 	}
 
 	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, "Rezepte")}
 
-	<div class="container mt-5">
-		<h1>Alle Rezepte</h1>
-		${insertHtml}
+	<div class="container"> <!-- Add container here -->
+		<div>
+			<h1>Alle Rezepte</h1>
+			<div class="row g-4">
+				<div class="col-md-6">
+					<div class="row g-4" id="recipesResults">${insertHtml1}</div>
+				</div>
+
+				<div class="col-md-6">
+					<div class="row g-4" id="ingredientsResults">${insertHtml2}</div>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	${getHtmlFile("footer.html")}`);

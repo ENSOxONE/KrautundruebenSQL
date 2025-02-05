@@ -5,13 +5,6 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <h1 class="card-title mb-4" id="recipeTitle"></h1>
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <h5>Portionen</h5>
-                            <p class="text-muted" id="recipePortions"></p>
-                        </div>
-                    </div>
-                    
                     <h4 class="mb-3">Zubereitung</h4>
                     <pre class="card-text p-4 rounded" 
                             style="white-space: pre-wrap; font-family: inherit" 
@@ -55,7 +48,6 @@
             const ingredients = json.result;
 
             document.getElementById('recipeTitle').textContent = recipe.REZEPT;
-            document.getElementById('recipePortions').textContent = recipe.PORTIONEN;
             document.getElementById('recipeInstructions').textContent = recipe.ZUBEREITUNG;
 
             const tbody = document.getElementById('ingredientsTable').querySelector('tbody');

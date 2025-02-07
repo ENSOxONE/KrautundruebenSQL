@@ -112,65 +112,65 @@ app.get("/ingredient-detail", async(request: Request, response: Response) => {
 	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, ingredient.BEZEICHNUNG)}
 	
 <div class="container">
-  <h1>Alle Zutaten</h1>
-  <div class="row g-4">
-    <!-- First Card -->
-    <div class="col-md-8">
-      <div id="recipesResults">
-        <div class="card border-0 custom-card"> <!-- Add custom-card class -->
-          <div class="row g-0">
-            <!-- Image Column -->
-            <div class="col-md-4 position-relative">
-              <img src="assets/images/ingredient1001.png" class="img-fluid h-100 rounded-start" alt="Zucchini">
-              <!-- Gradient overlay -->
-              <div class="gradient-overlay-right"></div>
-            </div>
-            <!-- Content Column -->
-            <div class="col-md-8 ps-4">
-              <div class="card-body">
-                <h5 class="card-title mb-4">Zucchini</h5>
-                <p class="card-text">Preis: 0.89€</p>
-                <p class="card-text">Kohlenhydrate: 2.00</p>
-                <p class="card-text">Protein: 1.60</p>
-                <div class="mt-4">
-                  <a href="/ingredients" class="btn btn-primary">Zurück</a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+	<h1>Alle Zutaten</h1>
+	<div class="row g-4">
+		<!-- First Card -->
+		<div class="col-md-8">
+			<div id="recipesResults">
+				<div class="card border-0 custom-card"> <!-- Add custom-card class -->
+					<div class="row g-0">
+					<!-- Image Column -->
+						<div class="col-md-4 position-relative">
+							<img src="assets/images/ingredient${ingredient.ZUTATENNR}.png" class="img-fluid h-100 rounded-start" alt="${ingredient.BEZEICHNUNG}">
+							<!-- Gradient overlay -->
+							<div class="gradient-overlay-right"></div>
+						</div>
+						<!-- Content Column -->
+						<div class="col-md-8 ps-4">
+							<div class="card-body">
+								<h5 class="card-title mb-4">${ingredient.BEZEICHNUNG}</h5>
+								<p class="card-text">Preis: ${ingredient.NETTOPREIS}€</p>
+								<p class="card-text">Kohlenhydrate: ${ingredient.KOHLENHYDRATE}</p>
+								<p class="card-text">Protein: ${ingredient.PROTEIN}</p>
+								<div class="mt-4">
+									<a href="/ingredients" class="btn btn-primary">Zurück</a>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 
-    <!-- Supplier Card -->
-    <div class="col-md-4">
-      <div id="ingredientsResults">
-        ${supplierCard.getHtml()} <!-- This remains unchanged -->
-      </div>
-    </div>
-  </div>
+		<!-- Supplier Card -->
+		<div class="col-md-4">
+			<div id="ingredientsResults">
+				${supplierCard.getHtml()} <!-- This remains unchanged -->
+			</div>
+		</div>
+	</div>
 </div>
 
 <style>
-  /* Custom styles for the first card */
-  .custom-card {
-    overflow: hidden; /* Contain the gradient overlay */
-  }
+	/* Custom styles for the first card */
+	.custom-card {
+		overflow: hidden; /* Contain the gradient overlay */
+	}
 
-  .gradient-overlay-right::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 0;
-    height: 100%;
-    width: 30px;
-    background: linear-gradient(90deg, transparent 0%, var(--bs-body-bg) 100%); /* Use body background color */
-    pointer-events: none;
-  }
+	.gradient-overlay-right::after {
+		content: '';
+		position: absolute;
+		right: 0;
+		top: 0;
+		height: 100%;
+		width: 30px;
+		background: linear-gradient(90deg, transparent 0%, var(--bs-body-bg) 100%); /* Use body background color */
+		pointer-events: none;
+	}
 
-  .rounded-start {
-    border-radius: var(--bs-card-border-radius) 0 0 var(--bs-card-border-radius) !important;
-  }
+	.rounded-start {
+		border-radius: var(--bs-card-border-radius) 0 0 var(--bs-card-border-radius) !important;
+	}
 </style>
 	
 	${getHtmlFile("footer.html")}`);

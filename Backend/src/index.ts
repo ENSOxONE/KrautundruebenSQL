@@ -1,17 +1,17 @@
+import { User, Recipe, Ingredient, RecipeIngredient, Supplier, ApiIngredient } from "./types";
+import { ProfileInformation } from "./html_elements/ProfileInformation";
 import { generateRandomHex } from "./utils/randomString";
 import { getHeader, getHtmlFile } from "./utils/html";
+import { CardTitle } from "./html_elements/CardTitle";
 import express, { Request, Response } from "express";
-import { User, Recipe, Ingredient, RecipeIngredient, Supplier, ApiIngredient } from "./types";
+import { CardText } from "./html_elements/CardText";
+import { RawHtml } from "./html_elements/RawHtml";
+import { validateAuthToken } from "./utils/auth";
+import { Card } from "./html_elements/Card";
 import { sha512 } from "./utils/hashing";
 import cookieParser from "cookie-parser";
 import { query } from "./utils/db";
 import path from "path";
-import { validateAuthToken } from "./utils/auth";
-import { Card } from "./html_elements/Card";
-import { CardText } from "./html_elements/CardText";
-import { CardTitle } from "./html_elements/CardTitle";
-import { RawHtml } from "./html_elements/RawHtml";
-import { ProfileInformation } from "./html_elements/ProfileInformation";
 
 const app = express();
 const port = 8080;

@@ -55,3 +55,14 @@ export type Supplier = {
     TELEFON: string,
     EMAIL: string
 }
+
+export type Category = {
+    KETEGORIENR: number,
+    KATEGORIE: string,
+    BESCHREIBUNG: string
+}
+
+export type Allergen = {
+    ALLERGENNR: number,
+    ALLERGEN: string
+}

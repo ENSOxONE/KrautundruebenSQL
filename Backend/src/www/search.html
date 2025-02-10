@@ -1,3 +1,4 @@
+
 <main class="container mt-4">
     <!-- Search Bar -->
     <div class="row mb-4">
@@ -11,6 +12,26 @@
                 <button class="btn btn-primary" type="button" id="searchButton">
                     Suche
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-8 offset-md-2">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="categoryFilter" class="form-label">Kategorie</label>
+                    <select class="form-select" id="categoryFilter">
+                        <option value="any">Beliebige Kategorie</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="allergenFilter" class="form-label">Allergen ausschließen</label>
+                    <select class="form-select" id="allergenFilter">
+                        <option value="any">Kein Allergen ausschließen</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -34,13 +55,44 @@
 </main>
 
 <script>
+    // Fetch and populate filters on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            // Fetch categories
+            const categoriesResponse = await fetch('/api/categories');
+            const categoriesData = await categoriesResponse.json();
+            const categorySelect = document.getElementById('categoryFilter');
+            categoriesData.results.forEach(category => {
+                const option = new Option(category.KATEGORIE, category);
+                categorySelect.add(option);
+            });
+
+            // Fetch allergens
+            const allergensResponse = await fetch('/api/allergens');
+            const allergensData = await allergensResponse.json();
+            const allergenSelect = document.getElementById('allergenFilter');
+            allergensData.results.forEach(allergen => {
+                const option = new Option(allergen.ALLERGEN, allergen);
+                allergenSelect.add(option);
+            });
+
+        } catch (error) {
+            console.error('Error loading filters:', error);
+            alert('Filter konnten nicht geladen werden');
+        }
+    });
+
     async function performSearch() {
         const searchQuery = document.getElementById('searchInput').value.trim();
-        if (!searchQuery) return;
+        const selectedCategory = document.getElementById('categoryFilter').value;
+        const selectedAllergen = document.getElementById('allergenFilter').value;
 
         try {
             const formData = new URLSearchParams();
             formData.append('searchQuery', searchQuery);
+            
+            if (selectedCategory !== 'any') formData.append('category', selectedCategory);
+            if (selectedAllergen !== 'any') formData.append('allergen', selectedAllergen);
 
             const response = await fetch('/api/search', {
                 method: 'POST',

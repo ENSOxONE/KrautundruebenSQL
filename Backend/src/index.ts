@@ -1,4 +1,4 @@
-import { User, Recipe, Ingredient, RecipeIngredient, Supplier, ApiIngredient } from "./types";
+import { User, Recipe, Ingredient, RecipeIngredient, Supplier, ApiIngredient, Category, Allergen } from "./types";
 import { ProfileInformation } from "./html_elements/ProfileInformation";
 import { generateRandomHex } from "./utils/randomString";
 import { getHeader, getHtmlFile } from "./utils/html";
@@ -110,7 +110,7 @@ app.get("/ingredient-detail", async(request: Request, response: Response) => {
 	supplierCard.addElement(new CardText(`Addresse: ${supplier.STRASSE} ${supplier.HAUSNR}, ${supplier.PLZ} ${supplier.ORT}`));
 	supplierCard.addElement(new RawHtml(`<a href="/ingredients" class="btn btn-primary">Zurück</a>`));
 	response.setHeader('Cache-Control', 'no-store, max-age=0').send(`${getHeader(loggedIn, ingredient.BEZEICHNUNG)}
-	
+
 <div class="container">
 	<h1>Alle Zutaten</h1>
 	<div class="row g-4">
@@ -199,6 +199,60 @@ app.get("/api/recipe/:recipeId", async(request: Request, response: Response) => 
 		return;
 	}
 	response.setHeader('Cache-Control', 'no-store, max-age=0').json(recipe);
+})
+
+app.get("/api/categories/", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+			success: false,
+			errors: [
+				"Not authenticated"
+			]
+		});
+		return;
+	}
+	const categories: Category[] = await query("SELECT * FROM ERNAHRUNGSKATEGORIEN") as Category[];
+	if (!categories) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+			success: false,
+			errors: [
+				"Categories not found."
+			]
+		});
+		return;
+	}
+	response.json({
+		success: true,
+		results: categories
+	})
+})
+
+app.get("/api/allergens/", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+			success: false,
+			errors: [
+				"Not authenticated"
+			]
+		});
+		return;
+	}
+	const allergens: Allergen[] = await query("SELECT * FROM ALLERGENE") as Allergen[];
+	if (!allergens) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+			success: false,
+			errors: [
+				"Allergens not found."
+			]
+		});
+		return;
+	}
+	response.json({
+		success: true,
+		results: allergens
+	})
 })
 
 app.get("/api/recipe/:recipeId/ingredients", async(request: Request, response: Response) => {

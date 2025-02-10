@@ -46,9 +46,9 @@ app.get("/loginerror", async(request: Request, response: Response) => {
 		<p id="errormessage"></p>
 	</div>
 
-    <script>
-        document.getElementById("errormessage").textContent = new URLSearchParams(window.location.search).get("errormessage");
-    </script>
+	<script>
+		document.getElementById("errormessage").textContent = new URLSearchParams(window.location.search).get("errormessage");
+	</script>
 	
 	${getHtmlFile("footer.html")}`);
 })
@@ -83,7 +83,7 @@ app.post("/ingredients", async(request: Request, response: Response) => {
 	response.setHeader('Cache-Control', 'no-store, max-age=0').json(ingredients);
 })
 
-app.get("/ingredient-detail", async(request: Request, response: Response) => {
+app.get("/ingredient-detail/", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
 	if (!loggedIn) {
 		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
@@ -100,7 +100,33 @@ app.get("/ingredient-detail", async(request: Request, response: Response) => {
 	card.addElement(new CardText(`Preis: ${ingredient.NETTOPREIS}€`));
 	card.addElement(new CardText(`Kohlenhydrate: ${ingredient.KOHLENHYDRATE}`));
 	card.addElement(new CardText(`Protein: ${ingredient.PROTEIN}`));
-	card.addElement(new RawHtml(`<a href="/ingredients" class="btn btn-primary">Zurück</a>`));
+	card.addElement(new RawHtml('<button class="btn btn-primary" onclick="onOrderClick()">Bestellen</button>'));
+	card.addElement(new RawHtml(`
+	<script>
+		const onOrderClick = async() => {
+			const formBody = new URLSearchParams();
+			formBody.append("ingredient", JSON.stringify({
+				ZUTATENNR: \`${ingredient.ZUTATENNR}\`,
+				BEZEICHNUNG: \`${ingredient.BEZEICHNUNG}\`,
+				EINHEIT: \`${ingredient.EINHEIT}\`,
+				NETTOPREIS: \`${ingredient.NETTOPREIS}\`,
+				BESTAND: \`${ingredient.BESTAND}\`,
+				LIEFERANT: \`${ingredient.LIEFERANT}\`,
+				KALORIEN: \`${ingredient.KALORIEN}\`,
+				KOHLENHYDRATE: \`${ingredient.KOHLENHYDRATE}\`,
+				PROTEIN: \`${ingredient.KOHLENHYDRATE}\`
+			}));
+			await fetch("/api/order", {
+				method: "POST",
+				body: formBody.toString(),
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+				}
+			})
+			alert("Bestellt!");
+		}
+	</script>
+	`));
 	card.setImage(`assets/images/ingredient${ingredient.ZUTATENNR}.png`, ingredient.BEZEICHNUNG);
 	const supplierCard: Card = new Card();
 	supplierCard.addElement(new CardTitle("Lieferant"));
@@ -134,6 +160,7 @@ app.get("/ingredient-detail", async(request: Request, response: Response) => {
 								<p class="card-text">Protein: ${ingredient.PROTEIN}</p>
 								<div class="mt-4">
 									<a href="/ingredients" class="btn btn-primary">Zurück</a>
+									<button class="btn btn-primary" onclick="onOrderClick()">Bestellen</button>
 								</div>
 							</div>
 						</div>
@@ -141,6 +168,31 @@ app.get("/ingredient-detail", async(request: Request, response: Response) => {
 				</div>
 			</div>
 		</div>
+
+		<script>
+			const onOrderClick = async() => {
+				const formBody = new URLSearchParams();
+				formBody.append("ingredient", JSON.stringify({
+					ZUTATENNR: \`${ingredient.ZUTATENNR}\`,
+					BEZEICHNUNG: \`${ingredient.BEZEICHNUNG}\`,
+					EINHEIT: \`${ingredient.EINHEIT}\`,
+					NETTOPREIS: \`${ingredient.NETTOPREIS}\`,
+					BESTAND: \`${ingredient.BESTAND}\`,
+					LIEFERANT: \`${ingredient.LIEFERANT}\`,
+					KALORIEN: \`${ingredient.KALORIEN}\`,
+					KOHLENHYDRATE: \`${ingredient.KOHLENHYDRATE}\`,
+					PROTEIN: \`${ingredient.KOHLENHYDRATE}\`
+				}));
+				await fetch("/api/order", {
+					method: "POST",
+					body: formBody.toString(),
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+					}
+				})
+				alert("Bestellt!");
+			}
+		</script>
 
 		<!-- Supplier Card -->
 		<div class="col-md-4">
@@ -445,6 +497,53 @@ app.get("/search", async(request: Request, response: Response) => {
 	${getHtmlFile("footer.html")}`)
 })
 
+app.post("/api/order/", async(request: Request, response: Response) => {
+	const loggedIn = await validateAuthToken(request.cookies.auth);
+	if (!loggedIn) {
+		response.setHeader('Cache-Control', 'no-store, max-age=0').redirect("/");
+		return;
+	}
+
+	if (request.body.ingredient) {
+		const ingredient: Ingredient = JSON.parse(request.body.ingredient);
+		const customer: User = (await query("SELECT * FROM KUNDE WHERE SESSIONTOKEN = ?", [request.cookies.auth]) as User[])[0];
+		await query("INSERT INTO BESTELLUNG (KUNDENNR, BESTELLDATUM, RECHNUNGSBETRAG) VALUES (?, CURDATE(), ?)", [customer.KUNDENNR, ingredient.NETTOPREIS]);
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({});
+		return;
+	} else if (request.body.recipe) {
+		const recipe: Recipe = JSON.parse(request.body.recipe);
+		const customer: User = (await query("SELECT * FROM KUNDE WHERE SESSIONTOKEN = ?", [request.cookies.auth]) as User[])[0];
+		const recipeIngredients = await query(
+			"SELECT * FROM REZEPTZUTATEN WHERE REZEPTNR = ?", 
+			[recipe.REZEPTNR]
+		) as RecipeIngredient[];
+
+		const ingredients = await Promise.all(
+			recipeIngredients.map(async (_ingredient) => {
+				const result = await query(
+					"SELECT * FROM ZUTAT WHERE ZUTATENNR = ?", 
+					[_ingredient.ZUTATENNR]
+				) as Ingredient[];
+				return result[0];
+			})
+		);
+		let totalPrice = 0;
+		ingredients.forEach(v => {
+			totalPrice += Number(v.NETTOPREIS);
+		})
+		await query("INSERT INTO BESTELLUNG (KUNDENNR, BESTELLDATUM, RECHNUNGSBETRAG) VALUES (?, CURDATE(), ?)", [customer.KUNDENNR, totalPrice]);
+		response.setHeader('Cache-Control', 'no-store, max-age=0').json({});
+		return;
+	}
+
+	response.setHeader('Cache-Control', 'no-store, max-age=0').json({
+		success: false,
+		errors: [
+			"idk"
+		]
+	})
+})
+
 app.post("/api/search", async(request: Request, response: Response) => {
 	const loggedIn = await validateAuthToken(request.cookies.auth);
 	if (!loggedIn) {
@@ -459,19 +558,70 @@ app.post("/api/search", async(request: Request, response: Response) => {
 				(stripped ? "Search query can't be empty." : "searchQuery parameter not specified.")
 			]
 		})
+		return;
+	}
+	let _query = `
+	SELECT REZEPTE.REZEPTNR, REZEPTE.REZEPT, REZEPTE.ZUBEREITUNG, ERNAHRUNGSKATEGORIEN.KATEGORIE
+	FROM (
+	  (
+		REZEPTE
+		LEFT JOIN REZEPTKATEGORIEN ON REZEPTE.REZEPTNR = REZEPTKATEGORIEN.REZEPTNR
+	  )
+	  RIGHT JOIN ERNAHRUNGSKATEGORIEN ON REZEPTKATEGORIEN.KATEGORIENR = ERNAHRUNGSKATEGORIEN.KATEGORIENR
+	)
+	WHERE
+	  REZEPTE.REZEPT LIKE ?`;
+	
+	// Add allergen exclusion if request.body.allergen exists
+	if (request.body.allergen) {
+	  _query += `
+	  AND REZEPTE.REZEPTNR NOT IN (
+		SELECT REZEPTE.REZEPTNR
+		FROM REZEPTE
+		INNER JOIN REZEPTALERGENE ON REZEPTE.REZEPTNR = REZEPTALERGENE.REZEPTNR
+		INNER JOIN ALLERGENE ON REZEPTALERGENE.ALLERGENNR = ALLERGENE.ALLERGENNR
+		WHERE ALLERGENE.ALLERGEN = ?
+	  )`;
+	}
+	
+	// Add category filter if request.body.category exists
+	if (request.body.category) {
+	  _query += `
+	  AND ERNAHRUNGSKATEGORIEN.KATEGORIE = ?`;
 	}
 	const matchingIngredients = await query("SELECT * FROM ZUTAT WHERE BEZEICHNUNG LIKE ?", [`%${stripped}%`]) as Ingredient[];
-	const recipes: Recipe[] = await query("SELECT * FROM REZEPTE WHERE REZEPT LIKE ?", [`%${stripped}%`]) as Recipe[];
+	let recipes: Recipe[] = await query(_query, [`%${stripped}%`, request.body.category]) as Recipe[];
+	if (!recipes) recipes = [];
+	const found: number[] = [];
+	recipes.forEach(recipe => {
+		if (found.includes(recipe.REZEPTNR)) {
+			recipes.splice(recipes.indexOf(recipe))
+		} else {
+			found.push(recipe.REZEPTNR);
+		}
+	});
 	for (const v of matchingIngredients) {
 		const recipeIngredients = await query("SELECT * FROM REZEPTZUTATEN WHERE ZUTATENNR = ?", [v.ZUTATENNR]) as RecipeIngredient[];
 		for (const recipeIngredient of recipeIngredients) {
-			const recipe = (await query("SELECT * FROM REZEPTE WHERE REZEPTNR = ?", [recipeIngredient.REZEPTNR]) as Recipe[])[0];
+			const recipe = (await query(`
+SELECT REZEPTE.REZEPTNR, REZEPTE.REZEPT, REZEPTE.ZUBEREITUNG, ERNAHRUNGSKATEGORIEN.KATEGORIE
+FROM (
+  (
+	REZEPTE
+	LEFT JOIN REZEPTKATEGORIEN ON REZEPTE.REZEPTNR = REZEPTKATEGORIEN.REZEPTNR
+  )
+  RIGHT JOIN ERNAHRUNGSKATEGORIEN ON REZEPTKATEGORIEN.KATEGORIENR = ERNAHRUNGSKATEGORIEN.KATEGORIENR
+)
+WHERE
+  REZEPTE.REZEPTNR = ?`, [recipeIngredient.REZEPTNR]) as Recipe[])[0];
 			let includes = false;
-			recipes.forEach((_recipe: Recipe) => {
+			recipes.forEach(_recipe => {
 				if (_recipe.REZEPT == recipe.REZEPT) includes = true;
 			})
 			if (!includes) {
-				recipes.push(recipe);
+				if ((!request.body.category || recipe.CATEGORY == request.body.category) && (!request.body.allergen || recipe.ALLERGEN != request.body.allergen)) {
+					recipes.push(recipe);
+				}
 			}
 		}
 	}

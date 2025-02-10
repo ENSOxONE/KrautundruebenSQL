@@ -100,7 +100,7 @@
 		const response = await fetch('/api/profile-information', {
 			cache: "no-cache"
 		});
-        const userData = await response.json();
+		const userData = await response.json();
 
 		document.getElementById('houseNumber').value = userData.houseNumber;
 		document.getElementById('postalCode').value = userData.postalCode;
@@ -118,48 +118,48 @@
 	});
 
 	document.getElementById('confirmChanges').addEventListener('click', async () => {
-        try {
-            const data = {
-                houseNumber: document.getElementById('houseNumber').value,
-                password: document.getElementById('password-field').value,
-                postalCode: document.getElementById('postalCode').value,
-                firstName: document.getElementById('firstName').value,
-                lastName: document.getElementById('lastName').value,
-                email: document.getElementById('email-field').value,
-                street: document.getElementById('street').value,
-                phone: document.getElementById('phone').value,
-                city: document.getElementById('city').value
-            };
+		try {
+			const data = {
+				houseNumber: document.getElementById('houseNumber').value,
+				password: document.getElementById('password-field').value,
+				postalCode: document.getElementById('postalCode').value,
+				firstName: document.getElementById('firstName').value,
+				lastName: document.getElementById('lastName').value,
+				email: document.getElementById('email-field').value,
+				street: document.getElementById('street').value,
+				phone: document.getElementById('phone').value,
+				city: document.getElementById('city').value
+			};
 
-            if (!/^\d{5}$/.test(data.postalCode)) {
-                alert("Ungültige Postleitzahl");
-                return;
-            }
+			if (!/^\d{5}$/.test(data.postalCode)) {
+				alert("Ungültige Postleitzahl");
+				return;
+			}
 
-            const formBody = new URLSearchParams();
-            for (const [key, value] of Object.entries(data)) {
-                formBody.append(key, value);
-            }
+			const formBody = new URLSearchParams();
+			for (const [key, value] of Object.entries(data)) {
+				formBody.append(key, value);
+			}
 
-            const response = await fetch('/api/update-profile', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-                },
-                body: formBody.toString()
-            });
+			const response = await fetch('/api/update-profile', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+				},
+				body: formBody.toString()
+			});
 
-            if (response.ok) {
-                window.location.href = '/profile';
-            } else {
-                const error = await response.text();
-                alert(`Fehler: ${error}`);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Ein Fehler ist aufgetreten');
-        } finally {
-            $('#passwordModal').modal('hide');
-        }
-    });
+			if (response.ok) {
+				window.location.href = '/profile';
+			} else {
+				const error = await response.text();
+				alert(`Fehler: ${error}`);
+			}
+		} catch (error) {
+			console.error('Error:', error);
+			alert('Ein Fehler ist aufgetreten');
+		} finally {
+			$('#passwordModal').modal('hide');
+		}
+	});
 </script>

@@ -17,7 +17,8 @@ export type Recipe = {
     REZEPTNR: number,
     REZEPT: string,
     ZUBEREITUNG: string,
-    PORTIONEN: string
+    CATEGORY?: string,
+    ALLERGEN?: string
 }
 
 export type Ingredient = {

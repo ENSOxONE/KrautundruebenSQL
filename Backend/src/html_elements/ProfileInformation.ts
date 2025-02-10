@@ -57,10 +57,17 @@ export class ProfileInformation extends HtmlElement {
 							</div>
 						</div>
 						<div class="card-footer text-end">
-							<a href="/edit-profile" class="btn btn-primary">
-								<i class="bi bi-pencil-fill me-2"></i>
-								Profil bearbeiten
-							</a>
+							<div class="row">
+								<div class="col-md-6">
+									<dt>Um eine Löschung ihrer daten zu beantragen schicken sie uns eine E-Mail unter info@krautundrueben.de</dt>
+								</div>
+								<div class="col-md-6">
+									<a href="/edit-profile" class="btn btn-primary">
+										<i class="bi bi-pencil-fill me-2"></i>
+										Profil bearbeiten
+									</a>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>

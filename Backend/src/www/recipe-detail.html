@@ -1,72 +1,89 @@
 <main class="container mt-5">
-    <div class="row">
-        <div class="col-md-8">
-            <!-- Recipe Details Card -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h1 class="card-title mb-4" id="recipeTitle"></h1>
-                    <h4 class="mb-3">Zubereitung</h4>
-                    <pre class="card-text rounded" 
-                          style="white-space: pre-wrap; font-family: inherit; margin: 0" 
-                          id="recipeInstructions"></pre>
-                </div>
-            </div>
-        </div>                  
+	<div class="row">
+		<div class="col-md-8">
+			<!-- Recipe Details Card -->
+			<div class="card mb-4">
+				<div class="card-body">
+					<h1 class="card-title mb-4" id="recipeTitle"></h1>
+					<img id="recipeImage" class="card-img-top"></img>
+					<h4 class="mb-3">Zubereitung</h4>
+					<pre class="card-text rounded" 
+						  style="white-space: pre-wrap; font-family: inherit; margin: 0" 
+						  id="recipeInstructions"></pre>
+					<button class="btn btn-primary" onclick="onOrderClick()">Bestellen</a></button>
+				</div>
+			</div>
+		</div>                  
 
-        <div class="col-md-4">
-            <!-- Ingredients Card -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h4 class="card-title mb-3">Zutaten</h4>
-                    <div class="table-responsive">
-                        <table class="table table-borderless" id="ingredientsTable">
-                            <tbody>
-                                <!-- Ingredients will be inserted here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+		<div class="col-md-4">
+			<!-- Ingredients Card -->
+			<div class="card mb-4">
+				<div class="card-body">
+					<h4 class="card-title mb-3">Zutaten</h4>
+					<div class="table-responsive">
+						<table class="table table-borderless" id="ingredientsTable">
+							<tbody>
+								<!-- Ingredients will be inserted here -->
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </main>
 
 <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const recipeId = urlParams.get('id');
+	const onOrderClick = async() => {
+		const formBody = new URLSearchParams();
+		formBody.append("recipe", JSON.stringify(window.recipe));
+		await fetch("/api/order", {
+			method: "POST",
+			body: formBody.toString(),
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+			}
+		})
+		alert("Bestellt!");
+	}
 
-        try {
-            const recipeResponse = await fetch(`/api/recipe/${recipeId}`);
-            if (!recipeResponse.ok) throw new Error('Rezept nicht gefunden');
-            const recipe = await recipeResponse.json();
+	document.addEventListener('DOMContentLoaded', async () => {
+		const urlParams = new URLSearchParams(window.location.search);
+		const recipeId = urlParams.get('id');
 
-            const ingredientsResponse = await fetch(`/api/recipe/${recipeId}/ingredients`);
-            if (!ingredientsResponse.ok) throw new Error('Zutaten nicht gefunden');
-            const json = await ingredientsResponse.json();
-            if (!json.success) throw new Error('Zutaten nicht gefunden');
-            const ingredients = json.result;
+		try {
+			const recipeResponse = await fetch(`/api/recipe/${recipeId}`);
+			if (!recipeResponse.ok) throw new Error('Rezept nicht gefunden');
+			const recipe = await recipeResponse.json();
+			window.recipe = recipe;
 
-            document.getElementById('recipeTitle').textContent = recipe.REZEPT;
-            document.getElementById('recipeInstructions').textContent = recipe.ZUBEREITUNG;
+			const ingredientsResponse = await fetch(`/api/recipe/${recipeId}/ingredients`);
+			if (!ingredientsResponse.ok) throw new Error('Zutaten nicht gefunden');
+			const json = await ingredientsResponse.json();
+			if (!json.success) throw new Error('Zutaten nicht gefunden');
+			const ingredients = json.result;
 
-            const tbody = document.getElementById('ingredientsTable').querySelector('tbody');
-            ingredients.forEach(ingredient => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td style="color: white;" class="bg-dark">${ingredient.BEZEICHNUNG}</td>
-                    <td style="color: white;" class="bg-dark">${ingredient.MENGE} ${ingredient.EINHEIT}</td>
-                `;
-                tbody.appendChild(row);
-            });
+			document.getElementById('recipeTitle').textContent = recipe.REZEPT;
+			document.getElementById('recipeInstructions').textContent = recipe.ZUBEREITUNG;
+			document.getElementById('recipeImage').setAttribute("src", `/assets/images/recipe${recipe.REZEPTNR}.png`)
 
-        } catch (error) {
-            console.error('Error:', error);
-            document.querySelector('main').innerHTML = `
-                <div class="alert alert-danger mt-4">
-                    ${error.message}
-                </div>
-            `;
-        }
-    });
+			const tbody = document.getElementById('ingredientsTable').querySelector('tbody');
+			ingredients.forEach(ingredient => {
+				const row = document.createElement('tr');
+				row.innerHTML = `
+					<td style="color: white;" class="bg-dark">${ingredient.BEZEICHNUNG}</td>
+					<td style="color: white;" class="bg-dark">${ingredient.MENGE} ${ingredient.EINHEIT}</td>
+				`;
+				tbody.appendChild(row);
+			});
+
+		} catch (error) {
+			console.error('Error:', error);
+			document.querySelector('main').innerHTML = `
+				<div class="alert alert-danger mt-4">
+					${error.message}
+				</div>
+			`;
+		}
+	});
 </script>

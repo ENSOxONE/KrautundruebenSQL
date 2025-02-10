@@ -63,7 +63,8 @@
             const categoriesData = await categoriesResponse.json();
             const categorySelect = document.getElementById('categoryFilter');
             categoriesData.results.forEach(category => {
-                const option = new Option(category.KATEGORIE, category);
+                console.log(category.KETEGORIENR);
+                const option = new Option(category.KATEGORIE, category.KATEGORIE);
                 categorySelect.add(option);
             });
 
@@ -72,7 +73,7 @@
             const allergensData = await allergensResponse.json();
             const allergenSelect = document.getElementById('allergenFilter');
             allergensData.results.forEach(allergen => {
-                const option = new Option(allergen.ALLERGEN, allergen);
+                const option = new Option(allergen.ALLERGEN, allergen.ALLERGEN);
                 allergenSelect.add(option);
             });
 
@@ -84,6 +85,9 @@
 
     async function performSearch() {
         const searchQuery = document.getElementById('searchInput').value.trim();
+        if (searchQuery == "") {
+            return;
+        }
         const selectedCategory = document.getElementById('categoryFilter').value;
         const selectedAllergen = document.getElementById('allergenFilter').value;
 
